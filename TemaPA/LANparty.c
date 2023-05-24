@@ -1,13 +1,56 @@
 #include"LANparty.h"
+int main(int argc,char* argv[])
+{
+    int nr_echipe;
+    Lista_de_echipe* head=NULL;
+    Lista_de_echipe* Top8=NULL;
+    Arbore* root=NULL;
+    int *taskuri;
+    taskuri=(int*)malloc(5*sizeof(int));
+    FILE *f1,*f3;
+    if((f1=fopen(argv[1],"rt"))==NULL)
+        printf("Fisierul nu s-a deschis");
+    if((f3=fopen(argv[3],"wt"))==NULL)
+        printf("fisierul nu s-a putut deschide");
+    for(int i=0;i<5;i++)
+        fscanf(f1,"%d",&taskuri[i]);
+    head=citire_fisier(&nr_echipe,argv[2]);
+    if(taskuri[1]==0)
+       {afisare_echipe(head,f3);}
+    if(taskuri[1]==1) {
+        eliminare_echipe_punctaj_minim(&head,&nr_echipe);
+        afisare_echipe(head,f3);
+    }
+    if(taskuri[2]==1)
+       {matchmaker(&head,&Top8,&nr_echipe,f3);}
+    if(taskuri[3]==1)
+        {root=generate_arbor(Top8,f3);}
+    if(taskuri[4]==1)
+        {afisare_in_arbore_AVL(root,f3);}
+    fclose(f3);
+    fclose(f1);
+    if(taskuri[3]==1)
+         { delete_tree(root);}
+    while(head!=NULL)
+        { delete_head(&head);
+        }
+    head=NULL;
+    while(Top8!=NULL)
+        delete_head(&Top8);
+    Top8=NULL;
+    free(taskuri);
+    taskuri=NULL;
+}
 Nod_echipa createNode(FILE* f)
 {
-     char buf[50];
+     char buf[255];
      int punctaj=0;
      Nod_echipa newnode;
      fscanf(f,"%d",&(newnode.nr_membri_echipa));
      fgetc(f);
-     fgets(buf,50,f);
-     buf[strcspn(buf,"\n")]=0;
+     fgets(buf,255,f);
+     buf[strcspn(buf,"\n")]='\0'; 
+     buf[strcspn(buf,"\r")]='\0'; 
      newnode.TeamName=(char*)malloc((strlen(buf))*sizeof(char));
      if(newnode.TeamName==NULL)
         printf("alocare esuata");
@@ -73,13 +116,13 @@ void add_at_end(Lista_de_echipe** head,Nod_echipa Team)
     }
     return;
 }
-Lista_de_echipe* citire_fisier(int* nr_echipe)
+Lista_de_echipe* citire_fisier(int* nr_echipe,char* arg)
 {
     Lista_de_echipe* cap_lista=NULL;
-    FILE* f;
     Nod_echipa Team;
-    if((f=fopen("d.in","rt"))==NULL)
-        printf("Nu se poate deschide fisierul");
+    FILE* f;
+    if((f=fopen(arg,"rt"))==NULL)
+       printf("fisierul nu s-a deschis");
     fscanf(f,"%d",nr_echipe);
     for(int i=0;i<(*nr_echipe);i++)
     {
@@ -102,6 +145,12 @@ void delete_head(Lista_de_echipe** head)
 {
     Lista_de_echipe* p=(*head);
     (*head)=(*head)->next;
+    for(int i=0;i<p->Echipa.nr_membri_echipa;i++)
+      {
+        free(p->Echipa.membri_echipa[i].firstName);
+        free(p->Echipa.membri_echipa[i].secondName);
+      }
+    free(p->Echipa.TeamName);
     free(p);
     return;
 }
@@ -114,6 +163,7 @@ void delete_node(Lista_de_echipe* head,Lista_de_echipe* nod_de_sters)
     }
     node=p->next;
     p->next=node->next;
+    free(node->Echipa.TeamName);
     free(node);
     return;
 }
@@ -148,7 +198,13 @@ void afisare_echipe(Lista_de_echipe* head,FILE* g)
 {
     Lista_de_echipe* node=head;
     while(node!=NULL)
-        {fprintf(g,"%s\n",node->Echipa.TeamName);
+         { for(int i=0;i<strlen(node->Echipa.TeamName);i++)     
+               {if(i==(strlen(node->Echipa.TeamName)-1)&&(node->Echipa.TeamName[i]==' '))
+                   ;                                 
+                else                                
+                    fprintf(g,"%c",node->Echipa.TeamName[i]); 
+               } 
+            fprintf(g,"\n");    
          node=node->next;}
     return;
 }
@@ -200,11 +256,11 @@ Meci* dequeue(Queue* q)
         return aux;
     }
 }
-void delete_losers(Lista_de_echipe** stiva_pierzatori,int nr_echipe)
+void delete_losers(Lista_de_echipe** stiva_pierzatori)
 {
     Nod_echipa aux;
     while((*stiva_pierzatori)!=NULL)
-        aux=pop(stiva_pierzatori);
+        {aux=pop(stiva_pierzatori);}
     return;
 }
 void matchfiller(Queue* coada_de_meciuri,Lista_de_echipe* current)
@@ -226,9 +282,22 @@ void matchprint(FILE* g,Meci* aux)
      for(int i=0;i<33-strlen(aux->Echipa1.TeamName);i++)
         fprintf(g," ");
      fprintf(g,"-");
-     for(int i=0;i<34-strlen(aux->Echipa2.TeamName);i++)
+     if(aux->Echipa2.TeamName[strlen(aux->Echipa2.TeamName)-1]==' ')
+        {
+            for(int i=0;i<34-strlen(aux->Echipa2.TeamName);i++)
+                fprintf(g," ");
+            for(int i=0;i<strlen(aux->Echipa2.TeamName);i++)
+               {if(i==(strlen(aux->Echipa2.TeamName)-1)&&(aux->Echipa2.TeamName[i]==' '))
+                   ;                                  
+                else                                 
+                    fprintf(g,"%c",aux->Echipa2.TeamName[i]);  
+               }
+            fprintf(g,"\n");
+        }
+    else{           
+     for(int i=0;i<33-strlen(aux->Echipa2.TeamName);i++)
         fprintf(g," ");
-    fprintf(g,"%s\n",aux->Echipa2.TeamName);
+    fprintf(g,"%s\n",aux->Echipa2.TeamName);}
     return;
 }
 void teamprint(Nod_echipa Team,FILE* g)
@@ -236,11 +305,11 @@ void teamprint(Nod_echipa Team,FILE* g)
     fprintf(g,"%s",Team.TeamName);
     for(int i=0;i<34-strlen(Team.TeamName);i++)
         fprintf(g," ");
-    fprintf(g,"- ");
+    fprintf(g,"-  ");
     fprintf(g,"%.2f\n",Team.punctaj_echipa);
     return;
 }
-void add_in_stacks(Lista_de_echipe** stiva_de_invingatori,Lista_de_echipe** stiva_de_pierzatori,Nod_echipa Team1,Nod_echipa Team2,int nr_echipe)
+void add_in_stacks(Lista_de_echipe** stiva_de_invingatori,Lista_de_echipe** stiva_de_pierzatori,Nod_echipa Team1,Nod_echipa Team2)
 {
     for(int i=0;i<Team1.nr_membri_echipa;i++)
         Team1.membri_echipa[i].punctaj++;
@@ -264,12 +333,12 @@ void matchmaker(Lista_de_echipe** head,Lista_de_echipe** Top8,int* nr_echipe,FIL
         {
             match=dequeue(coada_de_meciuri);
             matchprint(g,match);
-            if(match->Echipa1.punctaj_echipa>=match->Echipa2.punctaj_echipa)
-               add_in_stacks(&stiva_de_invingatori,&stiva_de_pierzatori,match->Echipa1,match->Echipa2,nr);
+            if(match->Echipa1.punctaj_echipa>match->Echipa2.punctaj_echipa)
+               add_in_stacks(&stiva_de_invingatori,&stiva_de_pierzatori,match->Echipa1,match->Echipa2);
             else
-               add_in_stacks(&stiva_de_invingatori,&stiva_de_pierzatori,match->Echipa2,match->Echipa1,nr);
+               add_in_stacks(&stiva_de_invingatori,&stiva_de_pierzatori,match->Echipa2,match->Echipa1);
         }
-        delete_losers(&stiva_de_pierzatori,nr);
+        delete_losers(&stiva_de_pierzatori);
         fprintf(g,"\nWINNERS OF ROUND NO:%d\n",round_number);
         round_number++;
         while(stiva_de_invingatori!=NULL)
@@ -361,6 +430,16 @@ int height(AVL* root)
     hd=height(root->right);
     return 1+((hs>hd) ? hs:hd);
 }
+void delete_tree(Arbore* root)
+{
+    if(root)
+    {
+        delete_tree(root->left);
+        delete_tree(root->right);
+        free(root);
+    }
+    return;
+}
 void printlevel(AVL* root,int level,FILE* g)
 {
     if(root==NULL)
@@ -384,32 +463,12 @@ int maximum(int a,int b)
 AVL* rightrotation(AVL* node)
 {
     AVL* y=node->left;
-    AVL* T3=y->right;
+    AVL* z=y->right;
     y->right=node;
-    node->left=T3;
+    node->left=z;
     node->height=maximum(height(node->left),height(node->right))+1;
     y->height=maximum(height(y->left),height(y->right))+1;
     return y;
-}
-AVL* leftrotation(AVL* node)
-{
-    AVL* y=node->right;
-    AVL* T3=y->left;
-    y->left=node;
-    node->right=T3;
-    node->height=maximum(height(node->left),height(node->right))+1;
-    y->height=maximum(height(y->left),height(y->right))+1;
-    return y;
-}
-AVL* RLrotation(AVL* node)
-{
-    node->right=rightrotation(node->right);
-    return leftrotation(node);
-}
-AVL* LRrotation(AVL* node)
-{
-    node->left=leftrotation(node->right);
-    return rightrotation(node);
 }
 AVL* insert_in_AVL(AVL* root,Nod_echipa Echipa)
 {
@@ -422,27 +481,11 @@ AVL* insert_in_AVL(AVL* root,Nod_echipa Echipa)
            root->height=0;
            return root;
        }
-    if(root->Team.punctaj_echipa==Echipa.punctaj_echipa)
-    {
-        if(strcmp(Echipa.TeamName,root->Team.TeamName)>0)
-            root->right=insert_in_AVL(root->right,Echipa);
-        else
-            root->left=insert_in_AVL(root->left,Echipa);
-    }
-    else if(root->Team.punctaj_echipa<Echipa.punctaj_echipa)
-        root->right=insert_in_AVL(root->right,Echipa);
-    else
-        root->left=insert_in_AVL(root->left,Echipa);
+    else root->left=insert_in_AVL(root->left,Echipa);
     root->height=1+maximum(height(root->left),height(root->right));
     int k=((height(root->left))-height(root->right));
-    if(k>1 && Echipa.punctaj_echipa<root->left->Team.punctaj_echipa)
-        return rightrotation(root);
-    if(k<-1 && Echipa.punctaj_echipa>root->left->Team.punctaj_echipa)
-        return leftrotation(root);
-    if(k>1 && Echipa.punctaj_echipa>root->left->Team.punctaj_echipa)
-        return RLrotation(root);
-    if(k<-1 && Echipa.punctaj_echipa<root->left->Team.punctaj_echipa)
-        return LRrotation(root);
+    if(k>1)
+       return rightrotation(root);
     return root;
 }
 AVL* generate_AVL(AVL* root,Arbore* radacina)
@@ -455,11 +498,22 @@ AVL* generate_AVL(AVL* root,Arbore* radacina)
     }
     return root;
 }
+void delete_AVL(AVL* root)
+{
+    if(root)
+    {
+        delete_AVL(root->left);
+        delete_AVL(root->right);
+        free(root);
+    }
+    return;
+}
 void afisare_in_arbore_AVL(Arbore* radacina,FILE* g)
 {
     AVL* root=NULL;
     root=generate_AVL(root,radacina);
     fprintf(g,"\nTHE LEVEL 2 TEAMS ARE:\n");
     printlevel(root,2,g);
+    delete_AVL(root);
     return;
 }
